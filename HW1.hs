@@ -10,6 +10,9 @@
 module HW1 where
 
 -- These import statement ensures you aren't using any "advanced" functions and types, e.g., lists.
+
+import Data.ByteString (count)
+import Distribution.Simple.Utils (xargs)
 import Prelude (Bool (..), Eq (..), Int, Integer, Num (..), Ord (..), curry, div, error, even, flip, id, mod, not, otherwise, undefined, ($), (&&), (.), (||))
 
 ------------------------------------------------
@@ -70,19 +73,38 @@ countDigits x
 
 toBinary :: Integer -> Integer
 toBinary x
-  | x == 1 = x
-  | x == 0 = x
+  | x == 1 || x == 0 = x
   | x < 0 = (-1) * toBinary (-x)
   | otherwise = 10 * toBinary (x `div` 2) + x `mod` 2
 
 fromBinary :: Integer -> Integer
-fromBinary = undefined
+fromBinary x
+  | x == 1 || x == 0 = x
+  | x < 0 = (-1) * fromBinary (-x)
+  | otherwise = 2 * fromBinary (x `div` 10) + x `mod` 10
 
 isAbundant :: Integer -> Bool
-isAbundant = undefined
+isAbundant x
+  | x < 0 = False
+  | otherwise = sumDivisors x (x - 1) > x
+
+sumDivisors :: Integer -> Integer -> Integer
+sumDivisors _ 1 = 1
+sumDivisors x y
+  | x `mod` y == 0 = y + sumDivisors x (y - 1)
+  | otherwise = sumDivisors x (y - 1)
 
 rotateDigits :: Integer -> Integer
-rotateDigits = undefined
+rotateDigits x
+  | x < 0 = (-1) * rotateRight (-x)
+  | otherwise = (x `mod` power 10 (countDigits x - 1)) * 10 + x `div` power 10 (countDigits x - 1)
+
+rotateRight :: Integer -> Integer
+rotateRight x = (x `div` 10) + (x `mod` 10) * power 10 (countDigits x - 1)
+
+power :: Integer -> Integer -> Integer
+power _ 0 = 1
+power x y = x * power x (y - 1)
 
 -- ********* --
 
@@ -93,30 +115,47 @@ rotateDigits = undefined
 type Generator a = (a -> a, a -> Bool, a)
 
 nullGen :: Generator a -> Bool
-nullGen = undefined
+nullGen (_, f, x) = not (f x)
 
 lastGen :: Generator a -> a
-lastGen = undefined
+lastGen (f, g, x)
+  | nullGen (f, g, x) = x
+  | otherwise = lastGen (f, g, f x)
 
 lengthGen :: Generator a -> Int
-lengthGen = undefined
+lengthGen (f, g, x)
+  | nullGen (f, g, x) = 0
+  | otherwise = 1 + lengthGen (f, g, f x)
 
 sumGen :: Generator Integer -> Integer
-sumGen = undefined
+sumGen (f, g, x)
+  | nullGen (f, g, x) = 0
+  | otherwise = f x + sumGen (f, g, f x)
 
 type Predicate a = a -> Bool
 
+positives :: Generator Integer
+positives = ((+ 1), const True, 0)
+
+positivesUpTo10 :: Generator Integer
+positivesUpTo10 = ((+ 1), (< 10), 0)
+
 anyGen :: Predicate a -> Generator a -> Bool
-anyGen = undefined
+anyGen p (f, g, x)
+  | nullGen (f, g, x) = False
+  | otherwise = p (f x) || anyGen p (f, g, f x)
 
 allGen :: Predicate a -> Generator a -> Bool
-allGen = undefined
+allGen p (f, g, x) = not (anyGen (not . p) (f, g, x))
 
 noneGen :: Predicate a -> Generator a -> Bool
-noneGen = undefined
+noneGen p g = not (anyGen p g)
 
 countGen :: Predicate a -> Generator a -> Int
-countGen = undefined
+countGen p (f, g, x)
+  | noneGen p (f, g, x) = 0
+  | p (f x) = 1 + countGen p (f, g, f x)
+  | otherwise = countGen p (f, g, f x)
 
 -- ********* --
 
