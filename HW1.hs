@@ -164,16 +164,33 @@ countGen p (f, g, x)
 -- ********* --
 
 isPrime :: Integer -> Bool
-isPrime = undefined
+isPrime x
+  | x < 2 = False
+  | otherwise = not (anyGen (x `divisible`) ((+ 1), (< x - 1), 1))
+
+divisible :: Integer -> Integer -> Bool
+divisible x y = x `mod` y == 0
 
 isSemiprime :: Integer -> Bool
-isSemiprime = undefined
+isSemiprime x = anyGen (x `semiPrimePredicate`) ((+ 1), (<= x `div` 2), 1)
+
+semiPrimePredicate :: Integer -> Integer -> Bool
+semiPrimePredicate x y = divisible x y && isPrime y && isPrime (x `div` y)
 
 goldbachPair :: Integer -> (Integer, Integer)
-goldbachPair = undefined
+goldbachPair num = goldbachPairSearch num 2
+  where
+    goldbachPairSearch x y
+      | isPrime y && isPrime (x - y) = (y, x - y)
+      | otherwise = goldbachPairSearch x (y + 1)
 
 goldbachPair' :: Integer -> (Integer, Integer)
-goldbachPair' = undefined
+goldbachPair' num = aux num num (0, 0)
+  where
+    aux x y (z, w)
+      | y == 0 = (z, w)
+      | isPrime y && isPrime (x - y) && y * (x - y) > z * w = aux x (y - 1) (y, x - y)
+      | otherwise = aux x (y - 1) (z, w)
 
 -- ***** --
 
@@ -182,5 +199,14 @@ goldbachPair' = undefined
 -- ***** --
 
 isCircularPrime :: Integer -> Bool
--- If you choose the implement this function, replace this with the actual implementation
-isCircularPrime = undefined
+isCircularPrime x = checkAllRotationsLeft x (countDigits x) && checkAllRotationsRight x (countDigits x)
+
+checkAllRotationsLeft :: Integer -> Integer -> Bool
+checkAllRotationsLeft x c
+  | c == 0 = True
+  | otherwise = isPrime x && checkAllRotationsLeft (rotateDigits x) (c - 1)
+
+checkAllRotationsRight :: Integer -> Integer -> Bool
+checkAllRotationsRight x c
+  | c == 0 = True
+  | otherwise = isPrime x && checkAllRotationsRight ((-1) * rotateDigits (-x)) (c - 1)
